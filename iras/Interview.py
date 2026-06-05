@@ -98,6 +98,20 @@ def record_audio(duration=120, fs=16000):
 
         audio_queue.put(indata.copy())
 
+    try:
+        devices = sd.query_devices()
+        input_devices = [d for d in devices if d.get('max_input_channels', 0) > 0]
+
+        if not input_devices:
+            st.error(
+                "No microphone input device available. Render servers cannot access your local microphone. Use browser audio upload/WebRTC recording instead."
+            )
+            return None
+
+    except Exception as e:
+        st.error(f"Audio device check failed: {str(e)}")
+        return None
+
     stream = sd.InputStream(
         samplerate=fs,
         channels=1,
@@ -783,6 +797,8 @@ def render_interview():
 
                     with st.spinner("Smart voice capture active..."):
                         audio_path = record_audio(duration=120)
+                    if not audio_path:
+                        st.stop()
 
                     try:
                         text = stt_engine.transcribe(audio_path)
